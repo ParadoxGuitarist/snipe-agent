@@ -57,6 +57,7 @@ new function to obtain the data you need if it's not already available in go.
 - `GetSerialNumber()` - Returns the local device's serial number.
 - `GetExternalIP()` - Returns external IP as a string.
 - `GetPreferredLocalIP()` - Returns the local IPv4 address of the preferred network interface as a string.
+- `GetInstalledPrograms()` - Returns a multi line string of installed applications. 
 
 ---
 ## Build
