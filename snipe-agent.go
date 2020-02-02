@@ -16,6 +16,7 @@ import (
   "net"
   "log"
   "bytes"
+  "reflect"
 )
 
 // Set all the variables.
@@ -296,6 +297,29 @@ func CheckWebHost(web string) bool{
   return false
 }
 
+// Gets a list of Installed Applications
+// If you use this to map to a custom field, be sure it's a textarea type as it contians multiple lines. 
+func GetInstalledPrograms() string{
+  switch os := runtime.GOOS; os {
+    // Make a case for Windows computers.
+    case "windows":
+      // Run a powershell command to grab the Serial Number
+      cmd := exec.Command("powershell", "Get-ItemProperty", `'HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*'`, "|", "Select-Object", "DisplayName,", "DisplayVersion,", "Publisher,", "InstallDate", "|", "Out-String" )
+      result, err := cmd.Output()
+      if err != nil {
+        fmt.Println(err)
+        // Return err on error so we don't try to update.
+        return "err"
+      } 
+      // The result, by default contains carriage returns we need to remove:
+      return string(result)
+    case "default":
+      fmt.Println("Your OS is not supported for Program lists.")
+  }
+  return "Not Supported"
+}
+
+
 // Main
 func main() {
   // Set up Runtime flags.
@@ -346,13 +370,24 @@ func main() {
     // Pass blank payload into populate function which returns the current data.
     assetPayload := PopulatePayload(assetInfo)
 
+    // Check to see if value or any field contain erorrs so we don't update
+    v := reflect.ValueOf(assetPayload)
+	  for i := 0; i< v.NumField(); i++ {
+		  if (v.Field(i).Interface() == "err" ){
+			  fmt.Println("One or more fields errored, so we'll try again at the next interval.")
+        time.Sleep( time.Duration(UpdateFrequency) * time.Minute)
+        // Continue so we don't run any more code and start the loop over again.
+        continue
+      }	
+	  }
+    
     // Pass filled struct into function to update snipe
     // Set the returned value to update so we can quit if there was an error.
     update := PatchToSnipe(assetPayload)
 
     // Check if the update failed or not so we can fail the service if needed.
     if update != true {
-      // We've failed, raise a system exit.
+      // We've failed, raise a system exit.Chetan
       fmt.Println("Patching the snipe asset failed, which shouldn't have occured. There is likely something wrong with your build. Exiting.")
       os.Exit(1)
     }
